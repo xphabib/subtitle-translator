@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { srtToJson, jsonToSrt, chunkArray, formatBytes } from '@/lib/subtitle';
+import Link from 'next/link';
 
 /* ─── HELPERS ────────────────────────────────────────────────── */
 function now() {
@@ -25,8 +26,9 @@ function Toast({ toasts }) {
 /* ─── SIDEBAR ────────────────────────────────────────────────── */
 function Sidebar({ activeTab, setActiveTab }) {
   const nav = [
-    { id: 'translate', icon: '⚡', label: 'Translate' },
-    { id: 'preview',   icon: '👁️', label: 'Preview' },
+    { id: 'translate', icon: '⚡', label: 'Translate', isLink: false },
+    { id: 'timing', icon: '⏱️', label: 'Timing', href: '/timing', isLink: true },
+    { id: 'preview', icon: '👁️', label: 'Preview', isLink: false },
   ];
   return (
     <aside className="sidebar">
@@ -37,15 +39,26 @@ function Sidebar({ activeTab, setActiveTab }) {
 
       <nav className="sidebar-nav">
         {nav.map(item => (
-          <button
-            key={item.id}
-            id={`nav-${item.id}`}
-            className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(item.id)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            {item.label}
-          </button>
+          item.isLink ? (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="nav-item"
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </Link>
+          ) : (
+            <button
+              key={item.id}
+              id={`nav-${item.id}`}
+              className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </button>
+          )
         ))}
       </nav>
 
