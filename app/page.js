@@ -27,7 +27,6 @@ function Sidebar({ activeTab, setActiveTab }) {
   const nav = [
     { id: 'translate', icon: '⚡', label: 'Translate' },
     { id: 'preview',   icon: '👁️', label: 'Preview' },
-    { id: 'settings',  icon: '⚙️', label: 'Settings' },
   ];
   return (
     <aside className="sidebar">
@@ -222,88 +221,6 @@ function PreviewTable({ data, showTranslated, targetLanguage }) {
 function SettingsForm({ config, setConfig }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div className="form-group">
-        <label className="form-label">API Provider</label>
-        <div className="toggle-group" id="api-provider-toggle">
-          {['openai', 'omniroute'].map(p => (
-            <div
-              key={p}
-              id={`provider-${p}`}
-              className={`toggle-option ${config.apiProvider === p ? 'active' : ''}`}
-              onClick={() => setConfig(c => ({ ...c, apiProvider: p }))}
-            >
-              {p === 'openai' ? '🤖 OpenAI' : '🏠 Local OmniRoute'}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {config.apiProvider === 'openai' ? (
-        <>
-          <div className="form-group">
-            <label className="form-label" htmlFor="api-key">OpenAI API Key</label>
-            <input
-              id="api-key"
-              className="input"
-              type="password"
-              placeholder="sk-proj-..."
-              value={config.apiKey}
-              onChange={e => setConfig(c => ({ ...c, apiKey: e.target.value }))}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="model-select">Model</label>
-            <select
-              id="model-select"
-              className="select"
-              value={config.model}
-              onChange={e => setConfig(c => ({ ...c, model: e.target.value }))}
-            >
-              <option value="gpt-4o-mini">GPT-4o mini (fast, cheap)</option>
-              <option value="gpt-4o">GPT-4o (best quality)</option>
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (budget)</option>
-            </select>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="form-group">
-            <label className="form-label" htmlFor="api-url">API URL</label>
-            <input
-              id="api-url"
-              className="input"
-              type="text"
-              placeholder="http://localhost:20128/api/v1/chat/completions"
-              value={config.apiUrl}
-              onChange={e => setConfig(c => ({ ...c, apiUrl: e.target.value }))}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="local-api-key">API Key</label>
-            <input
-              id="local-api-key"
-              className="input"
-              type="password"
-              placeholder="sk-..."
-              value={config.localApiKey}
-              onChange={e => setConfig(c => ({ ...c, localApiKey: e.target.value }))}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="local-model">Model</label>
-            <input
-              id="local-model"
-              className="input"
-              type="text"
-              placeholder="agy/gemini-3.5-flash-low"
-              value={config.localModel}
-              onChange={e => setConfig(c => ({ ...c, localModel: e.target.value }))}
-            />
-          </div>
-        </>
-      )}
-
       <div className="settings-grid">
         <div className="form-group">
           <label className="form-label" htmlFor="chunk-size">Chunk Size</label>
@@ -406,12 +323,9 @@ export default function Home() {
   const [toasts,    setToasts]          = useState([]);
   const [status,    setStatus]          = useState('idle'); // idle|translating|done|error
   const [config, setConfig] = useState({
-    apiProvider:  'openai',
-    apiKey:       '',
-    model:        'gpt-4o-mini',
     apiUrl:       'http://localhost:20128/api/v1/chat/completions',
-    localApiKey:  'sk-dcf89108ea6dab3c-ca8356-d02574f1',
-    localModel:   'agy/gemini-3.5-flash-low',
+    apiKey:       'sk-dcf89108ea6dab3c-ca8356-d02574f1',
+    model:        'agy/gemini-3.5-flash-low',
     chunkSize:    30,
     targetLanguage: 'Bengali (বাংলা)',
   });
@@ -460,11 +374,6 @@ export default function Home() {
       addToast('Please upload a .srt file first.', 'error');
       return;
     }
-    if (config.apiProvider === 'openai' && !config.apiKey) {
-      addToast('Please set your OpenAI API key in Settings.', 'error');
-      setActiveTab('settings');
-      return;
-    }
 
     setIsRunning(true);
     setStatus('translating');
@@ -499,10 +408,10 @@ export default function Home() {
             subtitles: subtitles.map(s => ({ id: s.id, text: s.originalText })),
             chunkIndex: i,
             chunkSize: config.chunkSize,
-            apiProvider: config.apiProvider,
-            apiKey: config.apiProvider === 'openai' ? config.apiKey : config.localApiKey,
+            apiProvider: 'omniroute',
+            apiKey: config.apiKey,
             apiUrl: config.apiUrl,
-            model:  config.apiProvider === 'openai' ? config.model : config.localModel,
+            model:  config.model,
             targetLanguage: config.targetLanguage,
           }),
         });
@@ -580,7 +489,6 @@ export default function Home() {
   const tabLabel = {
     translate: 'Translate',
     preview:   'Preview',
-    settings:  'Settings',
   };
 
   return (
@@ -598,8 +506,6 @@ export default function Home() {
             subtitle={
               activeTab === 'translate'
                 ? file ? `Working on: ${file.name}` : 'Upload a .srt file to begin'
-                : activeTab === 'settings'
-                ? 'Configure AI provider and translation options'
                 : subtitles.length > 0 ? `${subtitles.length} subtitles loaded` : 'No file loaded'
             }
             status={status !== 'idle' ? status : undefined}
@@ -635,31 +541,15 @@ export default function Home() {
                       <UploadZone file={file} onFile={handleFile} />
                     </div>
 
-                    {/* Quick Settings Summary */}
+                    {/* Configuration */}
                     <div className="card">
                       <div className="card-header">
                         <div className="card-title">
                           <div className="card-icon" style={{ background: 'rgba(6,182,212,0.2)' }}>⚙️</div>
                           Configuration
                         </div>
-                        <button
-                          id="open-settings-btn"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => setActiveTab('settings')}
-                        >
-                          Edit Settings
-                        </button>
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        <span className="badge badge-purple">
-                          {config.apiProvider === 'openai' ? '🤖 ' + config.model : '🏠 ' + config.localModel}
-                        </span>
-                        <span className="badge badge-cyan">🌐 {config.targetLanguage}</span>
-                        <span className="badge badge-orange">🧩 {config.chunkSize} per chunk</span>
-                        <span className={`badge ${config.apiKey || config.apiProvider === 'omniroute' ? 'badge-green' : 'badge-red'}`}>
-                          {config.apiKey || config.apiProvider === 'omniroute' ? '🔑 Key set' : '⚠️ No API key'}
-                        </span>
-                      </div>
+                      <SettingsForm config={config} setConfig={setConfig} />
                     </div>
                   </div>
 
@@ -767,28 +657,6 @@ export default function Home() {
                     </div>
                   </div>
                   <PreviewTable data={subtitles} showTranslated={status !== 'idle'} targetLanguage={config.targetLanguage} />
-                </div>
-              </div>
-            )}
-
-            {/* ─── SETTINGS TAB ────────────────────────────────── */}
-            {activeTab === 'settings' && (
-              <div className="fade-in">
-                <div className="card">
-                  <div className="card-header">
-                    <div className="card-title">
-                      <div className="card-icon" style={{ background: 'rgba(245,158,11,0.2)' }}>⚙️</div>
-                      API & Translation Settings
-                    </div>
-                    <button
-                      id="save-settings-btn"
-                      className="btn btn-primary btn-sm"
-                      onClick={() => { addToast('Settings saved!', 'success'); setActiveTab('translate'); }}
-                    >
-                      ✓ Save & Return
-                    </button>
-                  </div>
-                  <SettingsForm config={config} setConfig={setConfig} />
                 </div>
               </div>
             )}
