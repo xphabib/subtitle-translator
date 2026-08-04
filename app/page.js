@@ -323,9 +323,6 @@ export default function Home() {
   const [toasts,    setToasts]          = useState([]);
   const [status,    setStatus]          = useState('idle'); // idle|translating|done|error
   const [config, setConfig] = useState({
-    apiUrl:       'http://82.165.174.94:20128/api/v1/chat/completions',
-    apiKey:       'sk-dcf89108ea6dab3c-ca8356-d02574f1',
-    model:        'agy/gemini-3.5-flash-low',
     chunkSize:    30,
     targetLanguage: 'Bengali (বাংলা)',
   });
@@ -408,10 +405,6 @@ export default function Home() {
             subtitles: subtitles.map(s => ({ id: s.id, text: s.originalText })),
             chunkIndex: i,
             chunkSize: config.chunkSize,
-            apiProvider: 'omniroute',
-            apiKey: config.apiKey,
-            apiUrl: config.apiUrl,
-            model:  config.model,
             targetLanguage: config.targetLanguage,
           }),
         });

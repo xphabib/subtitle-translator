@@ -8,11 +8,16 @@ export async function POST(request) {
       subtitles,
       chunkIndex,
       chunkSize = 30,
-      apiKey,
-      apiUrl  = 'http://82.165.174.94:20128/api/v1/chat/completions',
-      model   = 'agy/gemini-3.5-flash-low',
       targetLanguage = 'Bengali (বাংলা)',
     } = body;
+
+    const apiKey = process.env.OMNIROUTE_API_KEY;
+    const apiUrl = process.env.OMNIROUTE_API_URL || 'http://82.165.174.94:20128/api/v1/chat/completions';
+    const model = process.env.OMNIROUTE_MODEL || 'agy/gemini-3.5-flash-low';
+
+    if (!apiKey) {
+      return Response.json({ error: 'OMNIROUTE_API_KEY is not configured.' }, { status: 500 });
+    }
 
     if (!subtitles || !Array.isArray(subtitles)) {
       return Response.json({ error: 'Invalid subtitles payload.' }, { status: 400 });
