@@ -323,7 +323,7 @@ export default function Home() {
   const [toasts,    setToasts]          = useState([]);
   const [status,    setStatus]          = useState('idle'); // idle|translating|done|error
   const [config, setConfig] = useState({
-    apiUrl:       'http://localhost:20128/api/v1/chat/completions',
+    apiUrl:       'http://82.165.174.94:20128/api/v1/chat/completions',
     apiKey:       'sk-dcf89108ea6dab3c-ca8356-d02574f1',
     model:        'agy/gemini-3.5-flash-low',
     chunkSize:    30,

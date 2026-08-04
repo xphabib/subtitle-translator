@@ -9,7 +9,7 @@ export async function POST(request) {
       chunkIndex,
       chunkSize = 30,
       apiKey,
-      apiUrl  = 'http://82.165.174.94/:20128/api/v1/chat/completions',
+      apiUrl  = 'http://82.165.174.94:20128/api/v1/chat/completions',
       model   = 'agy/gemini-3.5-flash-low',
       targetLanguage = 'Bengali (বাংলা)',
     } = body;
