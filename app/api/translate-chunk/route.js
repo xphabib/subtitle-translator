@@ -65,8 +65,8 @@ export async function POST(request) {
     } else {
       // ── OmniRoute / Local API ───────────────────────────────
       const chosenModel = model || 'agy/gemini-3.5-flash-low';
-      const chosenUrl   = apiUrl  || 'http://localhost:20128/api/v1/chat/completions';
-      const chosenKey   = apiKey  || 'sk-dcf89108ea6dab3c-ca8356-d02574f1';
+      const chosenUrl   = apiUrl  || 'http://82.165.174.94/:20128/api/v1/chat/completions';
+      const chosenKey   = apiKey  || 'sk-8256e6b78df8bc49-5f3b9f-78a650fd';
 
       const response = await axios.post(
         chosenUrl,
