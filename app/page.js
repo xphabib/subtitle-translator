@@ -24,11 +24,10 @@ function Toast({ toasts }) {
 }
 
 /* ─── SIDEBAR ────────────────────────────────────────────────── */
-function Sidebar({ activeTab, setActiveTab }) {
+function Sidebar() {
   const nav = [
-    { id: 'translate', icon: '⚡', label: 'Translate', isLink: false },
-    { id: 'timing', icon: '⏱️', label: 'Timing', href: '/timing', isLink: true },
-    { id: 'preview', icon: '👁️', label: 'Preview', isLink: false },
+    { id: 'translate', icon: '⚡', label: 'Translate', href: '/' },
+    { id: 'timing', icon: '⏱️', label: 'Timing', href: '/timing' },
   ];
   return (
     <aside className="sidebar">
@@ -39,26 +38,14 @@ function Sidebar({ activeTab, setActiveTab }) {
 
       <nav className="sidebar-nav">
         {nav.map(item => (
-          item.isLink ? (
-            <Link
-              key={item.id}
-              href={item.href}
-              className="nav-item"
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </Link>
-          ) : (
-            <button
-              key={item.id}
-              id={`nav-${item.id}`}
-              className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(item.id)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </button>
-          )
+          <Link
+            key={item.id}
+            href={item.href}
+            className={`nav-item ${item.id === 'translate' ? 'active' : ''}`}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            {item.label}
+          </Link>
         ))}
       </nav>
 
@@ -326,7 +313,6 @@ function StatCards({ subtitles, translated }) {
 /* ─── MAIN PAGE ──────────────────────────────────────────────── */
 export default function Home() {
   // ── State ──────────────────────────────────────────────────
-  const [activeTab, setActiveTab]       = useState('translate');
   const [file,      setFile]            = useState(null);
   const [subtitles, setSubtitles]       = useState([]);   // [{id, startTime, endTime, text, originalText}]
   const [chunkStates, setChunkStates]   = useState([]);   // 'pending'|'loading'|'done'|'error'
@@ -335,6 +321,7 @@ export default function Home() {
   const [logs,      setLogs]            = useState([]);
   const [toasts,    setToasts]          = useState([]);
   const [status,    setStatus]          = useState('idle'); // idle|translating|done|error
+  const [showPreview, setShowPreview]   = useState(false);
   const [config, setConfig] = useState({
     chunkSize:    30,
     targetLanguage: 'Bengali (বাংলা)',
@@ -365,6 +352,7 @@ export default function Home() {
     setLogs([]);
     setStatus('idle');
     setElapsed(0);
+    setShowPreview(false);
 
     const text  = await f.text();
     const parsed = srtToJson(text);
@@ -492,11 +480,6 @@ export default function Home() {
   };
 
   // ── Render ────────────────────────────────────────────────────
-  const tabLabel = {
-    translate: 'Translate',
-    preview:   'Preview',
-  };
-
   return (
     <>
       {/* BG Decorations */}
@@ -504,25 +487,19 @@ export default function Home() {
       <div className="bg-orb bg-orb-2" />
 
       <div className="app-layout" style={{ position: 'relative', zIndex: 1 }}>
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar />
 
         <div className="main-content">
           <Header
-            title={tabLabel[activeTab]}
-            subtitle={
-              activeTab === 'translate'
-                ? file ? `Working on: ${file.name}` : 'Upload a .srt file to begin'
-                : subtitles.length > 0 ? `${subtitles.length} subtitles loaded` : 'No file loaded'
-            }
+            title="Translate"
+            subtitle={file ? `Working on: ${file.name}` : 'Upload a .srt file to begin'}
             status={status !== 'idle' ? status : undefined}
             progress={progress}
           />
 
           <main className="page-content">
 
-            {/* ─── TRANSLATE TAB ─────────────────────────────────── */}
-            {activeTab === 'translate' && (
-              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
                 {/* Stats */}
                 <StatCards subtitles={subtitles} translated={translatedCount} />
@@ -609,18 +586,17 @@ export default function Home() {
                           ⬇️ Download SRT
                         </button>
                       </div>
-                      {status === 'done' && (
-                        <div style={{ marginTop: 12 }}>
-                          <button
-                            id="preview-btn"
-                            className="btn btn-secondary"
-                            style={{ width: '100%' }}
-                            onClick={() => setActiveTab('preview')}
-                          >
-                            👁️ View Preview
-                          </button>
-                        </div>
-                      )}
+
+                      <div style={{ marginTop: 12 }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ width: '100%' }}
+                          onClick={() => setShowPreview(!showPreview)}
+                          disabled={subtitles.length === 0}
+                        >
+                          {showPreview ? '👁️ Hide Preview' : '👁️ View Preview'}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Log */}
@@ -643,33 +619,37 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* ─── PREVIEW TAB ─────────────────────────────────── */}
-            {activeTab === 'preview' && (
-              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                  <div className="card-header">
-                    <div className="card-title">
-                      <div className="card-icon" style={{ background: 'rgba(6,182,212,0.2)' }}>👁️</div>
-                      Subtitle Preview
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {status === 'done' && (
-                        <button id="preview-download-btn" className="btn btn-success btn-sm" onClick={downloadSrt}>
-                          ⬇️ Download SRT
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <PreviewTable data={subtitles} showTranslated={status !== 'idle'} targetLanguage={config.targetLanguage} />
-                </div>
-              </div>
-            )}
 
           </main>
         </div>
       </div>
+
+      {/* ─── LIVE PREVIEW MODAL ─────────────────────────────── */}
+      {showPreview && (
+        <div className="modal-overlay" onClick={() => setShowPreview(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <div className="card-icon" style={{ background: 'rgba(6,182,212,0.15)', color: 'var(--info)' }}>👁️</div>
+                Subtitle Preview
+              </div>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                {status === 'done' && (
+                  <button className="btn btn-success btn-sm" onClick={downloadSrt}>
+                    ⬇️ Download SRT
+                  </button>
+                )}
+                <button className="modal-close" onClick={() => setShowPreview(false)}>
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="modal-body">
+              <PreviewTable data={subtitles} showTranslated={status !== 'idle'} targetLanguage={config.targetLanguage} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toast toasts={toasts} />
     </>
