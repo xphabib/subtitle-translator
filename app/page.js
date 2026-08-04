@@ -176,7 +176,7 @@ function ProgressPanel({ chunks, totalChunks, elapsed }) {
 }
 
 /* ─── PREVIEW TABLE ──────────────────────────────────────────── */
-function PreviewTable({ data, showTranslated }) {
+function PreviewTable({ data, showTranslated, targetLanguage }) {
   if (!data || data.length === 0) {
     return (
       <div className="empty-state">
@@ -186,8 +186,6 @@ function PreviewTable({ data, showTranslated }) {
     );
   }
 
-  const rows = data.slice(0, 200);
-
   return (
     <div className="preview-scroll">
       <table className="preview-table">
@@ -196,11 +194,11 @@ function PreviewTable({ data, showTranslated }) {
             <th style={{ width: 32 }}>#</th>
             <th>Timecode</th>
             <th>Original (English)</th>
-            {showTranslated && <th>Translated (Bengali)</th>}
+            {showTranslated && <th>Translated ({targetLanguage})</th>}
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
+          {data.map(row => (
             <tr key={row.id}>
               <td className="id-cell">{row.id}</td>
               <td className="time-cell">
@@ -488,45 +486,51 @@ export default function Home() {
     let completedCount = 0;
     let errorCount = 0;
     const updatedSubs = [...subtitles];
+    const MAX_RETRIES = 3;
 
-    // Translate all chunks in parallel
-    const promises = chunks.map((_, i) => {
+    const translateChunk = async (i, attempt = 1) => {
       setChunkStates(prev => { const n=[...prev]; n[i]='loading'; return n; });
 
-      return fetch('/api/translate-chunk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subtitles: subtitles.map(s => ({ id: s.id, text: s.originalText })),
-          chunkIndex: i,
-          chunkSize: config.chunkSize,
-          apiProvider: config.apiProvider,
-          apiKey: config.apiProvider === 'openai' ? config.apiKey : config.localApiKey,
-          apiUrl: config.apiUrl,
-          model:  config.apiProvider === 'openai' ? config.model : config.localModel,
-          targetLanguage: config.targetLanguage,
-        }),
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.error) throw new Error(data.error);
-
-          // Merge translated results into updatedSubs
-          for (const t of data.translated) {
-            const idx = updatedSubs.findIndex(s => s.id === t.id);
-            if (idx !== -1) updatedSubs[idx] = { ...updatedSubs[idx], text: t.text };
-          }
-
-          completedCount++;
-          setChunkStates(prev => { const n=[...prev]; n[i]='done'; return n; });
-          addLog(`Chunk ${i+1}/${chunks.length} done ✓`, 'success');
-        })
-        .catch(err => {
-          errorCount++;
-          setChunkStates(prev => { const n=[...prev]; n[i]='error'; return n; });
-          addLog(`Chunk ${i+1} error: ${err.message}`, 'error');
+      try {
+        const r = await fetch('/api/translate-chunk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subtitles: subtitles.map(s => ({ id: s.id, text: s.originalText })),
+            chunkIndex: i,
+            chunkSize: config.chunkSize,
+            apiProvider: config.apiProvider,
+            apiKey: config.apiProvider === 'openai' ? config.apiKey : config.localApiKey,
+            apiUrl: config.apiUrl,
+            model:  config.apiProvider === 'openai' ? config.model : config.localModel,
+            targetLanguage: config.targetLanguage,
+          }),
         });
-    });
+        const data = await r.json();
+        if (data.error) throw new Error(data.error);
+
+        for (const t of data.translated) {
+          const idx = updatedSubs.findIndex(s => s.id === t.id);
+          if (idx !== -1) updatedSubs[idx] = { ...updatedSubs[idx], text: t.text };
+        }
+
+        completedCount++;
+        setChunkStates(prev => { const n=[...prev]; n[i]='done'; return n; });
+        addLog(`Chunk ${i+1}/${chunks.length} done ✓`, 'success');
+      } catch (err) {
+        if (attempt < MAX_RETRIES) {
+          addLog(`Chunk ${i+1} failed (attempt ${attempt}/${MAX_RETRIES}), retrying…`, 'warning');
+          await new Promise(res => setTimeout(res, 1000 * attempt));
+          return translateChunk(i, attempt + 1);
+        }
+        errorCount++;
+        setChunkStates(prev => { const n=[...prev]; n[i]='error'; return n; });
+        addLog(`Chunk ${i+1} failed after ${MAX_RETRIES} attempts: ${err.message}`, 'error');
+      }
+    };
+
+    // Translate all chunks in parallel
+    const promises = chunks.map((_, i) => translateChunk(i));
 
     await Promise.all(promises);
 
@@ -747,8 +751,8 @@ export default function Home() {
 
             {/* ─── PREVIEW TAB ─────────────────────────────────── */}
             {activeTab === 'preview' && (
-              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div className="card">
+              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                   <div className="card-header">
                     <div className="card-title">
                       <div className="card-icon" style={{ background: 'rgba(6,182,212,0.2)' }}>👁️</div>
@@ -762,12 +766,7 @@ export default function Home() {
                       )}
                     </div>
                   </div>
-                  <PreviewTable data={subtitles} showTranslated={status !== 'idle'} />
-                  {subtitles.length > 200 && (
-                    <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-                      Showing first 200 of {subtitles.length} subtitles
-                    </div>
-                  )}
+                  <PreviewTable data={subtitles} showTranslated={status !== 'idle'} targetLanguage={config.targetLanguage} />
                 </div>
               </div>
             )}

@@ -362,6 +362,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 0;
 }
 
 /* ─── GRID ───────────────────────────────────────────────────── */
@@ -548,7 +549,7 @@ body {
   width: 32px;
 }
 .preview-scroll {
-  max-height: 320px;
+  flex: 1;
   overflow-y: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
